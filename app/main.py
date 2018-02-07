@@ -3,6 +3,7 @@ import os
 import random
 from ai import test_ai
 
+directions = ['up', 'down', 'left', 'right']
 test_direction = 0
 
 
@@ -36,11 +37,9 @@ def start():
 @bottle.post('/move')
 def move():
     data = bottle.request.json
-    test_direction = test_ai(test_direction)
-
-    # TODO: Do things with data
-    directions = ['up', 'down', 'left', 'right']
-    direction = directions[test_direction]
+    i = test_ai(test_direction)
+    test_direction = i
+    direction = directions[i]
     print(direction)
 
     return {
