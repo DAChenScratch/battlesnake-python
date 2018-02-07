@@ -1,6 +1,9 @@
 import bottle
 import os
 import random
+from ai import test_ai
+
+test_direction = 0
 
 
 @bottle.route('/static/<path:path>')
@@ -33,12 +36,14 @@ def start():
 @bottle.post('/move')
 def move():
     data = bottle.request.json
+    result = test_ai(test_direction)
+    test_direction = result
 
     # TODO: Do things with data
     directions = ['up', 'down', 'left', 'right']
 
     return {
-        'move': random.choice(directions),
+        'move': directions[result],
         'taunt': 'battlesnake-python!'
     }
 
