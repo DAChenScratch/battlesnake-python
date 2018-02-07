@@ -38,7 +38,7 @@ def move():
     directions = ['up', 'down', 'left', 'right']
     test_direction = test_ai(test_direction)
 
-    print(direction)
+    print(test_direction)
 
     return {
         'move': directions[test_direction],
