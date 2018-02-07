@@ -36,14 +36,15 @@ def start():
 @bottle.post('/move')
 def move():
     data = bottle.request.json
-    result = test_ai(test_direction)
-    test_direction = result
+    test_direction = test_ai(test_direction)
 
     # TODO: Do things with data
     directions = ['up', 'down', 'left', 'right']
+    direction = directions[test_direction]
+    print(direction)
 
     return {
-        'move': directions[result],
+        'move': direction,
         'taunt': 'battlesnake-python!'
     }
 
