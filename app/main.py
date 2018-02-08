@@ -3,6 +3,8 @@ import os
 import random
 from ai import test_ai
 
+test_direction = 0
+
 
 @bottle.route('/static/<path:path>')
 def static(path):
@@ -22,7 +24,6 @@ def start():
     )
 
     # TODO: Do things with data
-    test_direction = 0
 
     return {
         'color': '#99ccff',
@@ -35,6 +36,7 @@ def start():
 @bottle.post('/move')
 def move():
     data = bottle.request.json
+    global test_direction
     directions = ['up', 'down', 'left', 'right']
     test_direction = test_ai(test_direction)
 
