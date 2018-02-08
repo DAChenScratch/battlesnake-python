@@ -37,10 +37,10 @@ def start():
 def move():
     data = bottle.request.json
     global test_direction
-    directions = ['up', 'down', 'left', 'right']
+    directions = ['up', 'left', 'down', 'right']
     test_direction = test_ai(test_direction)
 
-    print(test_direction)
+    print(directions[test_direction])
 
     return {
         'move': directions[test_direction],
