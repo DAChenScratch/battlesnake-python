@@ -17,4 +17,4 @@ def build_map(data):
 def print_map(map):
     for i in map:
         for j in i:
-            print(str(map[i][j]) + ' ')
+            print(str(j) + ' ')
