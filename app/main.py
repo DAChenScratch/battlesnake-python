@@ -1,7 +1,10 @@
 import bottle
 import os
-import random
+import time
 from ai import test_ai
+from map_builder import build_map
+from map_builder import print_map
+
 
 test_direction = 0
 
@@ -27,7 +30,8 @@ def start():
 
     return {
         'color': '#99ccff',
-        'taunt': '{} ({}x{})'.format(game_id, board_width, board_height),
+        'secondary_color': '#99ddff'
+        'taunt': 'I\'m Baffled.',
         'head_url': head_url,
         'name': 'BaffleSnek'
     }
@@ -35,13 +39,19 @@ def start():
 
 @bottle.post('/move')
 def move():
-    data = bottle.request.json
     global test_direction
+    data = bottle.request.json
+    start_time = time.time()
+    # build current map using game data
+    map = build_map(data)
+
     directions = ['up', 'left', 'down', 'right']
     test_direction = test_ai(test_direction, data)
 
     print(directions[test_direction])
-
+    print_pat(map)
+    end_time = time.time()
+    print('Time for move was ' + str((end_time - start_time) * 1000) + 'ms')
     return {
         'move': directions[test_direction],
         'taunt': 'battlesnake-python!'
