@@ -31,7 +31,7 @@ def start():
     return {
         'color': '#99ccff',
         'secondary_color': '#99ddff'
-        'taunt': 'I\'m Baffled.',
+        'taunt': 'Im Baffled.',
         'head_url': head_url,
         'name': 'BaffleSnek'
     }
