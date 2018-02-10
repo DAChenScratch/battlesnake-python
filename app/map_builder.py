@@ -26,7 +26,7 @@ def build_map(data):
 def print_map(map, w, h):
     for row in map:
         print(str(row))
-        print('\n')
+        #print('\n')
 
 def display_map(map):
     for y in range(len(map)):
