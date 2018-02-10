@@ -1,12 +1,14 @@
-# battlesnake-python
+# BattleSnake
 
-A simple [BattleSnake AI](http://battlesnake.io) written in Python. 
+This is a Snake entry for the [BattleSnake](http://battlesnake.io) written in Python.
 
-Visit [battlesnake.io/readme](http://battlesnake.io/readme) for API documentation and instructions for running your AI.
+Forked from the [Python starter snake](https://github.com/sendwithus/battlesnake-python) provided by [sendwithus](https://www.sendwithus.com).
 
-This AI client uses the [bottle web framework](http://bottlepy.org/docs/dev/index.html) to serve requests and the [gunicorn web server](http://gunicorn.org/) for running bottle on Heroku. Dependencies are listed in [requirements.txt](requirements.txt).
+This AI client uses the [bottle web framework](http://bottlepy.org/docs/dev/index.html) to serve requests and the [gunicorn web server](http://gunicorn.org/) for running bottle on [Heroku](https://heroku.com). Dependencies are listed in [requirements.txt](requirements.txt).
 
-[![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
+## State of AI
+
+2018/02/10 - Currently runs in a circle. No pathfinding or avoidance behaviour.
 
 #### You will need...
 
@@ -16,7 +18,7 @@ This AI client uses the [bottle web framework](http://bottlepy.org/docs/dev/inde
 
 ## Running the Snake Locally
 
-1) [Fork this repo](https://github.com/sendwithus/battlesnake-python/fork).
+1) [Fork this repo](https://github.com/tyrelh/battlesnake-python/fork).
 
 2) Clone repo to your development environment:
 ```
@@ -60,4 +62,5 @@ heroku logs --tail
 
 ## Questions?
 
-Email [battlesnake@sendwithus.com](mailto:battlesnake@sendwithus.com), or tweet [@send_with_us](http://twitter.com/send_with_us).
+Email me [tyrel.hiebert@gmail.com](mailto:tyrel.hiebert@gmail.com)
+or email sendwithus [battlesnake@sendwithus.com](mailto:battlesnake@sendwithus.com), or tweet [@send_with_us](http://twitter.com/send_with_us).
