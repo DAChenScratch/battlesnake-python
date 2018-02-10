@@ -11,7 +11,7 @@ def build_map(data):
     map = [ [0 for col in range(data['height'])] for row in range(data['width'])]
     # fill in food locations
     for food in data['food']['data']:
-        map[food['x']][food['y']] = FOOD
+        map[food['y']][food['x']] = FOOD
     return map
 
 
