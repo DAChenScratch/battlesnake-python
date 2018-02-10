@@ -42,18 +42,21 @@ def start():
 def move():
     global test_direction
     data = bottle.request.json
-    start_time = time.time()
+
     # build current map using game data
+    start_time = time.time()
     map = build_map(data)
 
+    # run ai to get next direction
     directions = ['up', 'left', 'down', 'right']
     test_direction = test_ai(test_direction, data)
 
-    print(directions[test_direction])
+    # print data for debugging
     print_map(map, data['width'], data['height'])
-    #display_map(map)
+    print(directions[test_direction])
     end_time = time.time()
     print('Time for move was ' + str((end_time - start_time) * 1000) + 'ms')
+    
     return {
         'move': directions[test_direction],
         'taunt': 'battlesnake-python!'
