@@ -7,15 +7,15 @@ SNAKE_HEAD = 4
 
 def build_map(data):
     # create map and fill with zeros
-    map = [ [0 for col in range(data['width'])] for row in range(data['height'])]
+    map = [ [0 for col in range(data['height'])] for row in range(data['width'])]
     # fill in food locations
     for food in data['food']['data']:
-        map[food['x']][food['y']] = FOOD
+        map[food['y']][food['x']] = FOOD
     return map
 
 
 def print_map(map):
-    for i in map:
-        for j in i:
-            print(str(j) + ' '),
+    for y in map:
+        for x in i:
+            print(str(x) + ' '),
         print('\n')
