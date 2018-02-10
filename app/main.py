@@ -4,7 +4,6 @@ import time
 from ai import test_ai
 from map_builder import build_map
 from map_builder import print_map
-from map_builder import display_map
 
 
 test_direction = 0
