@@ -1,6 +1,6 @@
-# BattleSnake
+# BattleSnake 2018
 
-This is a Snake entry for the [BattleSnake](http://battlesnake.io) written in Python.
+This is a Snake entry for the [BattleSnake](http://battlesnake.io) programming competition in Victoria BC, written in Python.
 
 Forked from the [Python starter snake](https://github.com/sendwithus/battlesnake-python) provided by [sendwithus](https://www.sendwithus.com).
 
@@ -9,12 +9,6 @@ This AI client uses the [bottle web framework](http://bottlepy.org/docs/dev/inde
 ## State of AI
 
 2018/02/10 - Currently runs in a circle. No pathfinding or avoidance behaviour.
-
-#### You will need...
-
-* a working Python 2.7 development environment ([getting started guide](http://hackercodex.com/guide/python-development-environment-on-mac-osx/))
-* experience [deploying Python apps to Heroku](https://devcenter.heroku.com/articles/getting-started-with-python#introduction)
-* [pip](https://pip.pypa.io/en/latest/installing.html) to install Python dependencies
 
 ## Running the Snake Locally
 
@@ -62,5 +56,4 @@ heroku logs --tail
 
 ## Questions?
 
-Email me [tyrel.hiebert@gmail.com](mailto:tyrel.hiebert@gmail.com)
-or email sendwithus [battlesnake@sendwithus.com](mailto:battlesnake@sendwithus.com), or tweet [@send_with_us](http://twitter.com/send_with_us).
+Contact me [tyrel.hiebert@gmail.com](mailto:tyrel.hiebert@gmail.com) or contact [sendwithus](https://www.sendwithus.com) [battlesnake@sendwithus.com](mailto:battlesnake@sendwithus.com), [@send_with_us](http://twitter.com/send_with_us).
