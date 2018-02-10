@@ -15,8 +15,8 @@ def build_map(data):
     return map
 
 
-def print_map(map):
-    for i in range('height'):
-        for j in range('width'):
+def print_map(map, w, h):
+    for i in range(h):
+        for j in range(w):
             print(str(map[i][j])),
         print('\n')
