@@ -7,7 +7,7 @@ SNAKE_HEAD = 4
 
 def build_map(data):
     # create map and fill with zeros
-    print('Height: ' + str(data['height']) + '  Width: ' + str(data['width']))
+    #print('Height: ' + str(data['height']) + '  Width: ' + str(data['width']))
     map = [ [0 for col in range(data['height'])] for row in range(data['width'])]
     # fill in food locations
     for food in data['food']['data']:
@@ -19,7 +19,6 @@ def build_map(data):
             map[segment['x']][segment['y']] = SNAKE
         # mark snake head locations
         map[snake['body']['data'][0]['x']][snake['body']['data'][0]['y']] = SNAKE_HEAD
-
     return map
 
 
@@ -28,3 +27,10 @@ def print_map(map, w, h):
     for row in map:
         print(str(row))
         print('\n')
+
+def display_map(map):
+    for y in range(len(map)):
+        row = ""
+        for x in range(len(map[y])):
+            row = row + str(map[x][y]) + " "
+        print(row)
