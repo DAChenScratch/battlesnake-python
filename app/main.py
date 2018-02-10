@@ -21,8 +21,8 @@ def start():
     game_id = data['game_id']
     board_width = data['width']
     board_height = data['height']
-
-    head_url = '%s://%s/static/head.png' % (
+    # get head pic url
+    head_url = '%s://%s/static/snake_profile.png' % (
         bottle.request.urlparts.scheme,
         bottle.request.urlparts.netloc
     )
@@ -32,9 +32,9 @@ def start():
     return {
         'color': '#99ccff',
         'secondary_color': '#99ddff',
-        'taunt': 'Im Baffled.',
+        'taunt': 'Not cool peep.',
         'head_url': head_url,
-        'name': 'BaffleSnek'
+        'name': 'zero_cool'
     }
 
 
