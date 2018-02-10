@@ -13,8 +13,8 @@ def build_map(data):
     for food in data['food']['data']:
         map[food['x']][food['y']] = FOOD
     # fill in snake locations
-    for snake in data['snakes']['data']
-        for segment in snake['body']['data']
+    for snake in data['snakes']['data']:
+        for segment in snake['body']['data']:
             # get each segment from data{snakes, data, body, data}
             map[segment['x']][segment['y']] = SNAKE
         # mark snake head locations
