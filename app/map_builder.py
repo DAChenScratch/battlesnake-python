@@ -27,10 +27,3 @@ def print_map(map, w, h):
     for row in map:
         print(str(row))
         #print('\n')
-
-def display_map(map):
-    for y in range(len(map)):
-        row = ""
-        for x in range(len(map[y])):
-            row = row + str(map[y][x]) + " "
-        print(row)
