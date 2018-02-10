@@ -16,6 +16,6 @@ def build_map(data):
 
 def print_map(map):
     for y in map:
-        for x in i:
+        for x in y:
             print(str(x) + ' '),
         print('\n')
