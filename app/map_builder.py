@@ -11,12 +11,11 @@ def build_map(data):
     map = [ [0 for col in range(data['height'])] for row in range(data['width'])]
     # fill in food locations
     for food in data['food']['data']:
-        map[food['y']][food['x']] = FOOD
+        map[food['x']][food['y']] = FOOD
     return map
 
 
 def print_map(map):
     for y in map:
-        for x in y:
-            print(str(x) + ' '),
+        print(str(y)),
         print('\n')
