@@ -16,7 +16,6 @@ def build_map(data):
 
 
 def print_map(map, w, h):
-    for i in range(h):
-        for j in range(w):
-            print(str(map[i][j])),
+    for row in map:
+        print(str(row))
         print('\n')
