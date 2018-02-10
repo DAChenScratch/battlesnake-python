@@ -50,8 +50,8 @@ def move():
     test_direction = test_ai(test_direction, data)
 
     print(directions[test_direction])
-    #print_map(map, data['width'], data['height'])
-    display_map(map)
+    print_map(map, data['width'], data['height'])
+    #display_map(map)
     end_time = time.time()
     print('Time for move was ' + str((end_time - start_time) * 1000) + 'ms')
     return {
