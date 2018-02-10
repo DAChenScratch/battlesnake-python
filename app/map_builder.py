@@ -32,5 +32,5 @@ def display_map(map):
     for y in range(len(map)):
         row = ""
         for x in range(len(map[y])):
-            row = row + str(map[x][y]) + " "
+            row = row + str(map[y][x]) + " "
         print(row)
