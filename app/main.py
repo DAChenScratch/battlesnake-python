@@ -13,6 +13,10 @@ WALL = 5
 directions = ['up', 'left', 'down', 'right']
 # general variables
 direction = 0
+game_id = 0
+board_width = 0
+board_height = 0
+
 # a* variables
 
 
@@ -25,6 +29,7 @@ def static(path):
 # respond on /start
 @bottle.post('/start')
 def start():
+    global game_id, board_width, board_height
     data = bottle.request.json
     game_id = data['game_id']
     board_width = data['width']
@@ -47,17 +52,17 @@ def start():
 # respond on /move
 @bottle.post('/move')
 def move():
-    global direction
-    global directions
+    global direction, directions, board_height, board_width, game_id
     data = bottle.request.json
     # build current map using game data
     start_time = time.time()
     map = build_map(data)
     # run ai to get next direction
     direction = kill_time(direction, data)
+    #astar(data)
     # print data for debugging
     if debug:
-        print_map(map)
+        #print_map(map)
         print(directions[direction])
         end_time = time.time()
         print('Time for move was ' + str((end_time - start_time) * 1000) + 'ms')
@@ -70,11 +75,15 @@ def move():
 
 # test ai
 def kill_time(direction, data):
+    global board_height, board_width
     if debug:
         print('Killing time..')
         close_food = closest_food(data)
-        print(close_food)
-
+        grid = build_astar_grid(board_width, board_height)
+        print('closest food: ' + str(close_food))
+        print('neighbors of food: ')
+        for neighbor in grid[close_food[0]][close_food[1]].neighbors:
+            print(neighbor)
     direction += 1
     if direction == body_direction(data):
         direction += 1
@@ -159,6 +168,65 @@ def build_map(data):
 def print_map(map):
     for row in map:
         print(str(row))
+
+
+# astar search
+# def astar(data, map, destination):
+#     #destination = get_coords(destination)
+#     search_scores = build_astar_grid(data['width'], data['height'])
+#     open_set = set()
+#     closed_set = set()
+#     # set start location to current head location
+#     start = current_location(data)
+#     open_set.add(start)
+#     # while openset is NOT empty keep searching
+#     while open_set:
+#         lowest_cell = [9999, 9999] # x, y
+#         lowest_f = 9999
+#         # find cell with lowest f score
+#         for cell in open_set:
+#             if search_scores[cell[0]][cell[1]].f < lowest_f:
+#                 lowest_f = search_scores[cell[0]][cell[1]].f
+#                 lowest_cell = cell
+#         # found path to destination
+#         if lowest_cell == destination:
+#             something = 0
+#             # TODO figure out what to return, probably a direction
+#             return something
+#         # else continue searching
+#         current_cell = lowest_cell
+#         # update sets
+#         open_set.remove(lowest_cell)
+#         closed_set.add(current_cell)
+#         # check every viable neighbor to current cell
+#         assess_neighbors(current_cell)
+
+
+# return grid of empty Cells for astar search data
+def build_astar_grid(w, h):
+    grid = [ [Cell(row, col) for col in range(h)] for row in range(w)]
+    return grid
+
+
+# the cell class for storing a* search information
+class Cell:
+    global board_height, board_width
+    def __init__(self, x, y):
+        self.f = 0
+        self.g = 0
+        self.h = 0
+        self.x = x
+        self.y = y
+        self.neighbors = []
+        self.previous = None
+        if self.x < board_width - 1:
+            self.neighbors.append([self.x + 1, self.y])
+        if self.x > 0:
+            self.neighbors.append([self.x - 1, self.y])
+        if self.y < board_height - 1:
+            self.neighbors.append([self.x, self.y + 1])
+        if self.y > 0:
+            self.neighbors.append([self.x, self.y - 1])
 
 
 # Expose WSGI app (so gunicorn can find it)
