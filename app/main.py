@@ -11,6 +11,7 @@ SNAKE_BODY = 3
 ENEMY_HEAD = 4
 WALL = 5
 directions = ['up', 'left', 'down', 'right']
+mode = ['hungry', 'killing_time']
 # general variables
 game_id = 0
 board_width = 0
@@ -20,6 +21,7 @@ board_height = 0
 direction = 0
 health = 100
 turn = 0
+survival_min = 50
 
 
 @bottle.route('/static/<path:path>')
@@ -30,21 +32,22 @@ def static(path):
 # respond on /start
 @bottle.post('/start')
 def start():
-    global game_id, board_width, board_height
+    global game_id, board_width, board_height, survival_min
     data = bottle.request.json
     game_id = data['game_id']
     board_width = data['width']
     board_height = data['height']
+    survival_min = max(board_height, board_width) * 2
+    if survival_min > 90: survival_min = 90
     # get head pic url
     head_url = '%s://%s/static/snake_profile.png' % (
         bottle.request.urlparts.scheme,
         bottle.request.urlparts.netloc
     )
-    # TODO: Do things with data
     return {
-        'color': '#99ccff',
-        'secondary_color': '#99ddff',
-        'taunt': 'Not cool peep.',
+        'color': '#3b94e3', # blue
+        'secondary_color': '#cc4ff1', # pink
+        'taunt': 'So cool fam.',
         'head_url': head_url,
         'name': 'zero_cool'
     }
@@ -56,10 +59,18 @@ def move():
     global direction, directions, board_height, board_width, game_id, health, turn
     data = bottle.request.json
     start_time = time.time()
-    # run ai to get next direction
-    direction = ai(data)
     health = data['you']['health']
     turn = data['turn']
+    taunt = 'Super cool.'
+    # run ai to get next direction
+    if health < survival_min:
+        print('HUNGRY! SEEKING FOOD.')
+        taunt = 'Not cool.'
+        direction = ai(data)
+    else:
+        print('COOL. KILLING TIME.')
+        taunt = 'Super cool.'
+        direction = kill_time(data)
     # print data for debugging
     if debug:
         print('REMAINING HEALTH IS ' + str(health) + ' ON TURN ' + str(turn) + '.')
@@ -81,23 +92,11 @@ def ai(data):
 
 
 
-# circle around yourself to kill time safely
-def kill_time(direction, data):
-    global board_height, board_width
-    if debug:
-        print('Killing time..')
-        close_food = closest_food(data)
-        #grid = build_astar_grid(board_width, board_height)
-        print('closest food: ' + str(close_food))
-        #print('neighbors of food: ')
-        #for neighbor in grid[close_food[0]][close_food[1]].neighbors:
-            #print(neighbor)
-    direction += 1
-    if direction == body_direction(data):
-        direction += 1
-    if direction > 3:
-        direction = 0
-    return direction
+# follow own tail to kill time
+def kill_time(data):
+    map = build_map(data)
+    tail = get_tail(data)
+    return astar(data, map, tail)
 
 
 # convert object yx to list yx
@@ -128,6 +127,15 @@ def closest_food(data):
                 shortest_distance = distance
                 closest_food = food
     return closest_food
+
+
+# return coords to own tail
+def get_tail(data):
+    body = data['you']['body']['data']
+    tail = current_location(data)
+    for segment in body:
+        tail = get_coords(segment)
+    return tail
 
 
 # return x,y coords of current head location
@@ -262,14 +270,14 @@ def print_map(map):
 # astar search
 def astar(data, map, destination):
     global debug
-    if debug: print('destination for search: ' + str(destination))
+    #if debug: print('destination for search: ' + str(destination))
     #destination = get_coords(destination)
     search_scores = build_astar_grid(data['width'], data['height'])
     open_set = []
     closed_set = []
     # set start location to current head location
     start = current_location(data)
-    if debug: print('Current location for search: ' + str(start))
+    #if debug: print('Current location for search: ' + str(start))
     open_set.append(start)
     #if debug: print('Current location for search in open_set: ' + str(open_set))
     # while openset is NOT empty keep searching
