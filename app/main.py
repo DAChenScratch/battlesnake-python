@@ -4,7 +4,7 @@ import time
 
 debug = True
 status = True
-theme = 'orange' # blue or orange
+theme = 'blue' # blue or orange
 # board variables
 SPACE = 0
 KILL_ZONE = 1
@@ -64,9 +64,11 @@ def start():
     return {
         'color': primary_color,
         'secondary_color': secondary_color,
-        'taunt': 'So cool fam.',
         'head_url': head_url,
-        'name': 'Zero_Cool'
+        'name': 'Zero_Cool',
+        'taunt': 'So cool fam.',
+        'head_type': 'bender',
+        'tail_type': 'freckled'
     }
 
 
