@@ -165,7 +165,7 @@ def calculate_direction(a, b, map, data):
         direction = 2
     count = 0
     while not valid_move(direction, map, data):
-        if count == 4:
+        if count == 3:
             print('DEAD END, NO VALID MOVE REMAINING!')
             print('GAME OVER')
             break
