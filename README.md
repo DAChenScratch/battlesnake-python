@@ -8,6 +8,8 @@ This AI client uses the [bottle web framework](http://bottlepy.org/docs/dev/inde
 
 ## State of AI
 
+2018/02/13 - Switches between following own tail to kill time if health is above threshold and seeking nearest food if health is below threshold.
+
 2018/02/13 - Will seek closest food. Generally will avoid snake bodies and outer wall on each move.
 
 2018/02/10 - Currently runs in a circle. No pathfinding or avoidance behaviour.
