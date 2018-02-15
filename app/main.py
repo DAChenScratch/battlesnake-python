@@ -4,7 +4,7 @@ import time
 
 debug = True
 status = True
-theme = 'orange' # blue or orange
+theme = 'blue' # blue or orange
 # board variables
 SPACE = 0
 KILL_ZONE = 1
@@ -191,11 +191,11 @@ def astar(data, map, destination):
             # retrace path back to origin to find optimal next move
             temp = lowest_cell
             temp_scores = search_scores[temp[0]][temp[1]]
-            if temp_scores.previous:
-                while search_scores[temp[0]][temp[1]].previous[0] != start[0] and search_scores[temp[0]][temp[1]].previous[1] != start[1]:
-                    if debug: print('temp_scores.previous ' + str(search_scores[temp[0]][temp[1]].previous))
-                    if debug: print('start ' + str(start));
-                    temp = search_scores[temp[0]][temp[1]].previous
+            #if temp_scores.previous:
+            while search_scores[temp[0]][temp[1]].previous[0] != start[0] and search_scores[temp[0]][temp[1]].previous[1] != start[1]:
+                #if debug: print('temp_scores.previous ' + str(search_scores[temp[0]][temp[1]].previous))
+                #if debug: print('start ' + str(start));
+                temp = search_scores[temp[0]][temp[1]].previous
             # get direction of next optimal move
             next_move = calculate_direction(start, temp, map, data)
             return next_move
@@ -207,10 +207,6 @@ def astar(data, map, destination):
         closed_set.append(current)
         # check every viable neighbor to current cell
         for neighbor in search_scores[current[0]][current[1]].neighbors:
-            # check if neighbor is a viable move
-            # if map[neighbor[0]][neighbor[1]] > FOOD:
-            #     open_set.remove(neighbor)
-            #     closed_set.append(neighbor)
             neighbor_cell = search_scores[neighbor[0]][neighbor[1]]
             # check if neighbor has already been evaluated
             if neighbor not in closed_set:# and map[neighbor[0]][neighbor[1]] <= FOOD:
@@ -222,7 +218,7 @@ def astar(data, map, destination):
                         shorter = False
                 # if not in either set, add to open set
                 else:
-                    if debug: print('neighbor: ' + str(map[neighbor[0]][neighbor[1]]))
+                    #if debug: print('neighbor: ' + str(map[neighbor[0]][neighbor[1]]))
                     open_set.append(neighbor)
                 # this is the current best path, record it
                 if shorter:
@@ -273,8 +269,8 @@ def calculate_direction(a, b, map, data):
     return direction
 
 
-# # out of the 3 possible moves, return the best one
-# # based only on 1 move ahead
+# # # out of the 3 possible moves, return the best one
+# # # based only on 1 move ahead
 # def best_move(data, map):
 #     global board_height, board_width
 #     if status: print('CHECKING FOR BEST MOVE...')
@@ -307,16 +303,26 @@ def calculate_direction(a, b, map, data):
 #                 viable_moves.remove(move)
 #                 danger_moves.append(move)
 #     else: # NO MOVE AT ALL
-#         return UP # SUICIDE
+#         return UP # suicide
 #     #
 #     if viable_moves:
 #         # EXISTS A NON DANGER MOVE
 #         # CALCULATE BEST ONE
 #         return DOWN # TEMP
+#     elif danger_moves:
+#         # ONLY DANGER MOVES EXIST
+#         # CALCULATE BEST ONE
+#     else:
+#         # NO MOVE AT ALL
+#         return UP # suicide
 
 
-# calculates number of cells accessable given a move
-#def look_ahead(move, map):
+# # calculates number of cells accessable given a move
+# def look_ahead(move, map, data):
+#     current = current_location(data)
+#     move_queue = []
+#     move_queue
+
 
 
 # check if move in direction will kill you
