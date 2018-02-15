@@ -67,8 +67,8 @@ def start():
         'head_url': head_url,
         'name': 'Zero_Cool',
         'taunt': 'So cool fam.',
-        'head_type': 'bender',
-        'tail_type': 'freckled'
+        #'head_type': 'bender',
+        #'tail_type': 'freckled'
     }
 
 
@@ -188,7 +188,11 @@ def astar(data, map, destination):
             temp = lowest_cell
             temp_scores = search_scores[temp[0]][temp[1]]
             if temp_scores.previous:
-                while temp_scores.previous[0] != start[0] and temp_scores.previous[1] != start[1]:
+
+
+                while search_scores[temp[0]][temp[1]].previous[0] != start[0] and search_scores[temp[0]][temp[1]].previous[1] != start[1]:
+                    if debug: print('temp_scores.previous ' + str(search_scores[temp[0]][temp[1]].previous))
+                    if debug: print('start ' + str(start));
                     temp = search_scores[temp[0]][temp[1]].previous
             # get direction of next optimal move
             next_move = calculate_direction(start, temp, map, data)
