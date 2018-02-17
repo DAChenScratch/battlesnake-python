@@ -4,7 +4,7 @@ import time
 
 debug = True
 status = True
-theme = 'blue' # blue or orange
+theme = 'orange' # blue or orange
 # board variables
 SPACE = 0
 KILL_ZONE = 1
@@ -42,14 +42,13 @@ def static(path):
 def start():
     global game_id, board_width, board_height, survival_min
     data = bottle.request.json
-    game_id = data['game_id']
-    board_width = data['width']
-    board_height = data['height']
-    survival_min = max(board_height, board_width) * 2
-    if survival_min > 90: survival_min = 90
+    # game_id = data['id']
+    # board_width = data['width']
+    # board_height = data['height']
+    # survival_min = max(board_height, board_width) * 2
+    #if survival_min > 100: survival_min = 100
     if status:
         print('STARTING NEW GAME.')
-        print('HEALTH THRESHOLD SET AT ' + str(survival_min))
     # get theme info
     # default theme blue
     primary_color = '#25c9f0'
@@ -81,13 +80,16 @@ def start():
 def move():
     global direction, directions, board_height, board_width, game_id, health, turn, my_id
     data = bottle.request.json
-    if status: start_time = time.time()
+    start_time = time.time()
+    board_width = data['width']
+    board_height = data['height']
     my_id = data['you']['id']
     health = data['you']['health']
     turn = data['turn']
     taunt = 'Super cool.'
+    survival_min = set_health_min(data)
     # run ai to get next direction
-    if health < survival_min:
+    if health < survival_min: #survival_min:
         taunt = 'Not cool.'
         direction = hungry(data)
     else:
@@ -97,8 +99,8 @@ def move():
     if status:
         print('REMAINING HEALTH IS ' + str(health) + ' ON TURN ' + str(turn) + '.')
         print('SENDING MOVE: ' + str(directions[direction]))
-        end_time = time.time()
-        print('Time for move was ' + str((end_time - start_time) * 1000) + 'ms')
+    end_time = time.time()
+    print('Time for move was ' + str((end_time - start_time) * 1000.0) + 'ms')
     # return next move
     return {
         'move': directions[direction],
@@ -109,72 +111,100 @@ def move():
 # do your thing
 def hungry(data):
     if status: print('HUNGRY! SEEKING FOOD.')
-    map = build_map(data)
+    grid = build_map(data)
     close_food = closest_food(data)
-    return astar(data, map, close_food)
+    astar_move = astar(data, grid, close_food)
+    return astar_move
 
 
 # follow own tail to kill time
 def kill_time(data):
     if status: print('COOL. KILLING TIME.')
-    map = build_map(data)
+    grid = build_map(data)
     tail = get_tail(data)
-    return astar(data, map, tail)
+    astar_move = astar(data, grid, tail)
+    return astar_move
 
 
 # return map array
 def build_map(data):
     global my_id, board_height, board_width
     if status: print('BUILDING MAP...')
-    # create map and fill with zeros
-    map = [ [SPACE for col in range(data['height'])] for row in range(data['width'])]
+    my_length = data['you']['length']
+    # create map and fill with SPACEs
+    grid = [ [SPACE for col in range(data['height'])] for row in range(data['width'])]
+    turn = data['turn']
     # fill in food locations
     for food in data['food']['data']:
-        map[food['x']][food['y']] = FOOD
+        grid[food['x']][food['y']] = FOOD
     # fill in snake locations
     for snake in data['snakes']['data']:
         for segment in snake['body']['data']:
             # get each segment from data {snakes, data, body, data}
-            map[segment['x']][segment['y']] = SNAKE_BODY
+            grid[segment['x']][segment['y']] = SNAKE_BODY
         # mark snake head locations
         #if debug: print('Snake id = ' + str(snake['id']))
         #if debug: print('My id = ' + str(my_id))
+        # mark tails as empty spaces only after turn 3
+        if debug:
+            if snake['id'] == my_id:
+                print('-1 body seg: ' + str(snake['body']['data'][-1]['x']) + ',' + str(snake['body']['data'][-1]['y']))
+                print('-2 body seg: ' + str(snake['body']['data'][-2]['x']) + ',' + str(snake['body']['data'][-2]['y']))
+        #if turn > 3:
+        if snake['body']['data'][-1] != snake['body']['data'][-2]:
+            tempX = snake['body']['data'][-1]['x']
+            tempY = snake['body']['data'][-1]['y']
+            grid[tempX][tempY] = SPACE
+        # dont mark own head or own danger zones
         if snake['id'] == my_id: continue
         head = get_coords(snake['body']['data'][0])
-        map[head[0]][head[1]] = ENEMY_HEAD
+        grid[head[0]][head[1]] = ENEMY_HEAD
         # mark danger locations around enemy head
         # check down from head
+        head_zone = DANGER
+        if snake['length'] < my_length:
+            head_zone = KILL_ZONE
         if (head[1] + 1 < board_height - 1):
-            if map[head[0]][head[1] + 1] < DANGER:
-                map[head[0]][head[1] + 1] = DANGER
+            if grid[head[0]][head[1] + 1] < head_zone:
+                grid[head[0]][head[1] + 1] = head_zone
         # check up from head
         if (head[1] - 1 > 0):
-            if map[head[0]][head[1] - 1] < DANGER:
-                map[head[0]][head[1] - 1] = DANGER
+            if grid[head[0]][head[1] - 1] < head_zone:
+                grid[head[0]][head[1] - 1] = head_zone
         # check left from head
         if (head[0] - 1 > 0):
-            if map[head[0] - 1][head[1]] < DANGER:
-                map[head[0] - 1][head[1]] = DANGER
+            if grid[head[0] - 1][head[1]] < head_zone:
+                grid[head[0] - 1][head[1]] = head_zone
         # check right from head
         if (head[0] + 1 < board_width - 1):
-            if map[head[0] + 1][head[1]] < DANGER:
-                map[head[0] + 1][head[1]] = DANGER
-    #if debug: print_map(map)
+            if grid[head[0] + 1][head[1]] < head_zone:
+                grid[head[0] + 1][head[1]] = head_zone
     # mark my head location
-    #map[data['you']['body']['data'][0]['x']][data['you']['body']['data'][0]['y']] = MY_HEAD
-    return map
+    #grid[data['you']['body']['data'][0]['x']][data['you']['body']['data'][0]['y']] = 1
+    #if debug: print_map(grid)
+    return grid
 
 
-# astar search
-def astar(data, map, destination):
-    global debug, FOOD
+# astar search, returns move that moves closest to destination
+def astar(data, grid, destination):
+    global debug
+    if debug:
+        print("map:")
+        print_map(grid)
     print('MAP BUILT! CALCULATING PATH...')
     #destination = get_coords(destination)
-    search_scores = build_astar_grid(data['width'], data['height'])
+    search_scores = build_astar_grid(data, grid)
     open_set = []
     closed_set = []
     # set start location to current head location
     start = current_location(data)
+    # on first 3 moves, point to closest food
+    if data['turn'] < 10:
+        destination = closest_food(data)
+    if debug:
+        print('astar destination: ' + str(destination))
+        # print("astar grid before search:")
+        # print_f_scores(search_scores)
     open_set.append(start)
     # while openset is NOT empty keep searching
     while open_set:
@@ -182,23 +212,26 @@ def astar(data, map, destination):
         lowest_f = 9999
         # find cell with lowest f score
         for cell in open_set:
-            if search_scores[cell[0]][cell[1]].f < lowest_f:
+            if search_scores[cell[0]][cell[1]].f < lowest_f: # CONSIDER CHANGING TO <= AND THEN ALSO COMPARING G SCORES
                 lowest_f = search_scores[cell[0]][cell[1]].f
                 lowest_cell = cell
         # found path to destination
         if lowest_cell[0] == destination[0] and lowest_cell[1] == destination[1]:
             if status: print('FOUND A PATH!')
+            if debug:
+                print("astar grid after search success:")
+                print_f_scores(search_scores)
             # retrace path back to origin to find optimal next move
             temp = lowest_cell
-            temp_scores = search_scores[temp[0]][temp[1]]
-            #if temp_scores.previous:
-            while search_scores[temp[0]][temp[1]].previous[0] != start[0] and search_scores[temp[0]][temp[1]].previous[1] != start[1]:
-                #if debug: print('temp_scores.previous ' + str(search_scores[temp[0]][temp[1]].previous))
-                #if debug: print('start ' + str(start));
+            if debug:
+                print('astar start pos: ' + str(start))
+            while search_scores[temp[0]][temp[1]].previous[0] != start[0] or search_scores[temp[0]][temp[1]].previous[1] != start[1]:
                 temp = search_scores[temp[0]][temp[1]].previous
             # get direction of next optimal move
-            next_move = calculate_direction(start, temp, map, data)
+            if debug: print('astar next move: ' + str(temp))
+            next_move = calculate_direction(start, temp, grid, data)
             return next_move
+
         # else continue searching
         current = lowest_cell
         current_cell = search_scores[current[0]][current[1]]
@@ -208,42 +241,59 @@ def astar(data, map, destination):
         # check every viable neighbor to current cell
         for neighbor in search_scores[current[0]][current[1]].neighbors:
             neighbor_cell = search_scores[neighbor[0]][neighbor[1]]
-            # check if neighbor has already been evaluated
-            if neighbor not in closed_set:# and map[neighbor[0]][neighbor[1]] <= FOOD:
-                temp_g = current_cell.g + 1
-                shorter = True
-                # check if already evaluated with lower g score
-                if neighbor in open_set:
-                    if temp_g > neighbor_cell.g:
-                        shorter = False
-                # if not in either set, add to open set
-                else:
-                    #if debug: print('neighbor: ' + str(map[neighbor[0]][neighbor[1]]))
-                    open_set.append(neighbor)
-                # this is the current best path, record it
-                if shorter:
-                    neighbor_cell.g = temp_g
-                    neighbor_cell.h = get_distance(neighbor, destination)
-                    neighbor_cell.f = neighbor_cell.g + neighbor_cell.h
-                    neighbor_cell.previous = current
+
+            if neighbor[0] == destination[0] and neighbor[1] == destination[1]:
+                if status: print('FOUND A PATH! (neighbor)')
+                neighbor_cell.previous = current
+
+                if debug:
+                    print("astar grid after search success:")
+                    print_f_scores(search_scores)
+                # retrace path back to origin to find optimal next move
+                temp = neighbor
+                if debug:
+                    print('astar start pos: ' + str(start))
+                while search_scores[temp[0]][temp[1]].previous[0] != start[0] or search_scores[temp[0]][temp[1]].previous[1] != start[1]:
+                    temp = search_scores[temp[0]][temp[1]].previous
+                # get direction of next optimal move
+                if debug: print('astar next move: ' + str(temp))
+                next_move = calculate_direction(start, temp, grid, data)
+                return best_move(next_move, data, grid)
+
+            # check if neighbor can be moved to
+            if neighbor_cell.state < SNAKE_BODY:
+                # check if neighbor has already been evaluated
+                if neighbor not in closed_set:# and grid[neighbor[0]][neighbor[1]] <= FOOD:
+                    temp_g = current_cell.g + 1
+                    shorter = True
+                    # check if already evaluated with lower g score
+                    if neighbor in open_set:
+                        if temp_g > neighbor_cell.g: # CHANGE TO >= ??
+                            shorter = False
+                    # if not in either set, add to open set
+                    else:
+                        #if debug: print('neighbor: ' + str(grid[neighbor[0]][neighbor[1]]))
+                        open_set.append(neighbor)
+                    # this is the current best path, record it
+                    if shorter:
+                        neighbor_cell.g = temp_g
+                        neighbor_cell.h = get_distance(neighbor, destination)
+                        neighbor_cell.f = neighbor_cell.g + neighbor_cell.h
+                        neighbor_cell.previous = current
+        # inside for neighbor
+    # inside while open_set
     # if reach this point and open set is empty, no path
     if not open_set:
         if status: print('COULD NOT FIND PATH!')
-        return 2
-
-
-# return manhattan distance between a and b
-def get_distance(a, b):
-    return (abs(a[0] - b[0]) + abs(a[1] - b[1]))
-
-
-# convert object yx to list yx
-def get_coords (o):
-    return (o['x'], o['y'])
+        if debug:
+            print("astar grid after search failure:")
+            print_f_scores(search_scores)
+        
+        return best_move(2, data, grid)
 
 
 # return direction from a to b
-def calculate_direction(a, b, map, data):
+def calculate_direction(a, b, grid, data):
     if status: print('CALCULATING NEXT MOVE...')
     x = a[0] - b[0]
     y = a[1] - b[1]
@@ -256,12 +306,12 @@ def calculate_direction(a, b, map, data):
     elif y < 0:
         direction = 2
     count = 0
-    while not valid_move(direction, map, data):
+    if not valid_move(direction, grid, data):
         if count == 3:
             if status:
                 print('DEAD END, NO VALID MOVE REMAINING!')
                 print('GAME OVER')
-            break
+            return direction
         count += 1
         direction += 1
         if direction == 4:
@@ -269,66 +319,274 @@ def calculate_direction(a, b, map, data):
     return direction
 
 
-# # # out of the 3 possible moves, return the best one
-# # # based only on 1 move ahead
-# def best_move(data, map):
-#     global board_height, board_width
-#     if status: print('CHECKING FOR BEST MOVE...')
-#     # directions = ['up', 'left', 'down', 'right']
-#     viable_moves = []
-#     current = current_location(data)
-#     best_move = -1
-#     # check UP move
-#     if current[1] - 1 >= 0 and map[current[0]][current[1] - 1] <= DANGER:
-#         viable_moves.append(UP)
-#         best_move = UP
-#     # check DOWN move
-#     if current[1] + 1 < board_height - 1 and map[current[0]][current[1] + 1] <= DANGER:
-#         viable_moves.append(DOWN)
-#         best_move = DOWN
-#     # check LEFT move
-#     if current[0] - 1 >= 0 and map[current[0] - 1][current[1]] <= DANGER:
-#         viable_moves.append(LEFT)
-#         best_move = LEFT
-#     # check RIGHT move
-#     if current[0] + 1 < board_width - 1 and map[current[0] + 1][current[1]] <= DANGER:
-#         viable_moves.append(RIGHT)
-#         best_move = RIGHT
+# out of the 3 possible moves, return the best one
+def best_move(reccommended_move, data, grid):
+    global board_height, board_width
+    if status: print('CHECKING FOR BEST MOVE...')
+    # directions = ['up', 'left', 'down', 'right']
+    # check reccommended move first
+    snake_length = data['you']['length']
+    if valid_move(reccommended_move, grid, data):
+        area = look_ahead(reccommended_move, grid, data)
+        print('Length: ' + str(snake_length) + '. Area: ' + str(area))
+        
 
-#     # check viable moves for a move better than DANGER
-#     danger_moves = []
-#     if viable_moves:
-#         for move in viable_moves:
-#             if move == DANGER:
-#                 viable_moves.remove(move)
-#                 danger_moves.append(move)
-#     else: # NO MOVE AT ALL
-#         return UP # suicide
-#     #
-#     if viable_moves:
-#         # EXISTS A NON DANGER MOVE
-#         # CALCULATE BEST ONE
-#         return DOWN # TEMP
-#     elif danger_moves:
-#         # ONLY DANGER MOVES EXIST
-#         # CALCULATE BEST ONE
-#     else:
-#         # NO MOVE AT ALL
-#         return UP # suicide
+        # if move_contains_tail
+        if snake_length <= area or move_contains_tail(reccommended_move, grid, data):
+            return reccommended_move
 
 
-# # calculates number of cells accessable given a move
-# def look_ahead(move, map, data):
-#     current = current_location(data)
-#     move_queue = []
-#     move_queue
+    viable_moves = []
+    danger_moves = []
+    current = current_location(data)
+    best_move = []
+    # check UP move
+    if current[1] - 1 >= 0 and grid[current[0]][current[1] - 1] <= DANGER:
+        if debug: print('move UP is viable')
+        viable_moves.append(UP)
+    # check DOWN move
+    if current[1] + 1 < board_height and grid[current[0]][current[1] + 1] <= DANGER:
+        if debug: print('move DOWN is viable')
+        viable_moves.append(DOWN)
+    # check LEFT move
+    if current[0] - 1 >= 0 and grid[current[0] - 1][current[1]] <= DANGER:
+        if debug: print('move LEFT is viable')
+        viable_moves.append(LEFT)
+    # check RIGHT move
+    if current[0] + 1 < board_width and grid[current[0] + 1][current[1]] <= DANGER:
+        if debug: print('move RIGHT is viable')
+        viable_moves.append(RIGHT)
+    # check viable moves for a move better than DANGER
+    if viable_moves:
+        for move in viable_moves:
+            # UP
+            if move == UP:
+                if grid[current[0]][current[1] - 1] == DANGER:
+                    viable_moves.remove(move)
+                    danger_moves.append(move)
+            # DOWN
+            elif move == DOWN:
+                if grid[current[0]][current[1] + 1] == DANGER:
+                    viable_moves.remove(move)
+                    danger_moves.append(move)
+            # LEFT
+            elif move == LEFT:
+                if grid[current[0] - 1][current[1]] == DANGER:
+                    viable_moves.remove(move)
+                    danger_moves.append(move)
+            # RIGHT
+            elif move == RIGHT:
+                if grid[current[0] + 1][current[1]] == DANGER:
+                    viable_moves.remove(move)
+                    danger_moves.append(move)
+    else: # NO MOVE AT ALL
+        if status:
+            print('DEAD END, NO VALID MOVE REMAINING! (none at all)')
+            print('GAME OVER')
+        return reccommended_move # suicide
+    # if a non-DANGER move exists, calculate the best one
+    if viable_moves:
+        # if ALL moves are viable, take reccommended_move
+        print(len(viable_moves))
+        if len(viable_moves) >= 3 and recommended_move in viable_moves:
+            print('ALL MOVES VALID, TAKING RECOMMENDED MOVE!')
+            return reccommended_move
+        ## TESTING
+        if move_contains_tail(move, grid, data):
+            return move
+        if status: print('VIABLE move exists!')
+        best_move = reccommended_move
+        best_area = 0 #look_ahead(reccommended_move, grid, data)
+        for move in viable_moves:
+            # check available area of move
+            new_area = look_ahead(move, grid, data)
+            if new_area > best_area:
+                best_area = new_area
+                best_move = move
+        return best_move
+    # if only DANGER moves exist, calculate best one
+    elif danger_moves:
+        # if ALL moves are DANGER, take reccommended_move
+        if len(danger_moves) >= 3: return reccommended_move
+        if status: print('No VIABLE move, only DANGER moves exist!')
+        best_move = reccommended_move
+        best_area = 0
+        for move in danger_moves:
+            # check available area of move
+            new_area = look_ahead(move, grid, data)
+            if new_area > best_area:
+                best_area = new_area
+                best_move = move
+        return best_move
+    else: # NO MOVE AT ALL
+        if status:
+            print('DEAD END, NO VALID MOVE REMAINING! (bottom)')
+            print('GAME OVER')
+        return reccommended_move # suicide
 
+
+# calculates number of cells accessable given a move
+def look_ahead(move, grid, data):
+    # directions = ['up', 'left', 'down', 'right']
+    test_grid = None
+    if debug:
+        w = len(grid)
+        h = len(grid[0])
+        test_grid = [ [0 for col in range(h)] for row in range(w)]
+        for i in range(w):
+            for j in range(h):
+                test_grid[i][j] = grid[i][j]
+        print('test grid before traversal:')
+        print_map(test_grid)
+    area = 0
+    current = current_location(data)
+    # get move coords
+    given_move_coords = current
+    if move == UP:
+        given_move_coords = [current[0], current[1] - 1]
+    elif move == DOWN:
+        given_move_coords = [current[0], current[1] + 1]
+    elif move == LEFT:
+        given_move_coords = [current[0] - 1, current[1]]
+    elif move == RIGHT:
+        given_move_coords = [current[0] + 1, current[1]]
+    move_queue = []
+    checked_moves = []
+    # start with given move
+    move_queue.append(given_move_coords)
+    # mark current as checked
+    checked_moves.append(current)
+    # iterate over all possible moves given initial move
+    while move_queue:
+        for next_move in move_queue:
+            # next move is assessed
+            area += 1
+            if debug: test_grid[next_move[0]][next_move[1]] = 7
+            move_queue.remove(next_move)
+            checked_moves.append(next_move)
+            # check neighbors
+            # check UP move
+            neighbor_up = [next_move[0], next_move[1] - 1]
+            # if not already checked, or queued to be checked
+            if neighbor_up != current and neighbor_up not in checked_moves and neighbor_up not in move_queue:
+                # if move on board
+                if neighbor_up[1] >= 0:
+                    # if move is valid
+                        if grid[neighbor_up[0]][neighbor_up[1]] <= DANGER:
+                            move_queue.append(neighbor_up)
+            # check DOWN move
+            neighbor_down = [next_move[0], next_move[1] + 1]
+            # if not already checked, or queued to be checked
+            if neighbor_down != current and neighbor_down not in checked_moves and neighbor_down not in move_queue:
+                # if move on board
+                if neighbor_down[1] < board_height:
+                    # if move is valid
+                        if grid[neighbor_down[0]][neighbor_down[1]] <= DANGER:
+                            move_queue.append(neighbor_down)
+            # check LEFT move
+            neighbor_left = [next_move[0] - 1, next_move[1]]
+            # if not already checked, or queued to be checked
+            if neighbor_left != current and neighbor_left not in checked_moves and neighbor_left not in move_queue:
+                # if move on board
+                if neighbor_left[0] >= 0:
+                    # if move is valid
+                        if grid[neighbor_left[0]][neighbor_left[1]] <= DANGER:
+                            move_queue.append(neighbor_left)
+            # check RIGHT move
+            neighbor_right = [next_move[0] + 1, next_move[1]]
+            # if not already checked, or queued to be checked
+            if neighbor_right != current and neighbor_right not in checked_moves and neighbor_right not in move_queue:
+                # if move on board
+                if neighbor_right[0] < board_width:
+                    # if move is valid
+                        if grid[neighbor_right[0]][neighbor_right[1]] <= DANGER:
+                            move_queue.append(neighbor_right)
+    if debug:
+        print('test grid after traversal:')
+        print_map(test_grid)
+    return area
+
+
+# return if the area enclosed by the given move includes own tail
+# function copied from look_ahead. May contain erroneous comments
+def move_contains_tail(move, grid, data):
+    # directions = ['up', 'left', 'down', 'right']
+    if status: print('CHECKING IF MOVE CONTAINS TAIL...')
+    tail = get_coords(data['you']['body']['data'][-1])
+    current = current_location(data)
+    contains_tail = False
+    # get move coords
+    given_move_coords = current
+    if move == UP:
+        given_move_coords = [current[0], current[1] - 1]
+    elif move == DOWN:
+        given_move_coords = [current[0], current[1] + 1]
+    elif move == LEFT:
+        given_move_coords = [current[0] - 1, current[1]]
+    elif move == RIGHT:
+        given_move_coords = [current[0] + 1, current[1]]
+    move_queue = []
+    checked_moves = []
+    # start with given move
+    move_queue.append(given_move_coords)
+    # mark current as checked
+    checked_moves.append(current)
+    # iterate over all possible moves given initial move
+    while move_queue:
+        for next_move in move_queue:
+            # next move is assessed
+            if tail[0] == next_move[0] and tail[1] == next_move[1]:
+                contains_tail = True
+            move_queue.remove(next_move)
+            checked_moves.append(next_move)
+            # check neighbors
+            # check UP move
+            neighbor_up = [next_move[0], next_move[1] - 1]
+            # if not already checked, or queued to be checked
+            if neighbor_up != current and neighbor_up not in checked_moves and neighbor_up not in move_queue:
+                # if move on board
+                if neighbor_up[1] >= 0:
+                    # if move is valid
+                        if grid[neighbor_up[0]][neighbor_up[1]] <= DANGER:
+                            move_queue.append(neighbor_up)
+            # check DOWN move
+            neighbor_down = [next_move[0], next_move[1] + 1]
+            # if not already checked, or queued to be checked
+            if neighbor_down != current and neighbor_down not in checked_moves and neighbor_down not in move_queue:
+                # if move on board
+                if neighbor_down[1] < board_height:
+                    # if move is valid
+                        if grid[neighbor_down[0]][neighbor_down[1]] <= DANGER:
+                            move_queue.append(neighbor_down)
+            # check LEFT move
+            neighbor_left = [next_move[0] - 1, next_move[1]]
+            # if not already checked, or queued to be checked
+            if neighbor_left != current and neighbor_left not in checked_moves and neighbor_left not in move_queue:
+                # if move on board
+                if neighbor_left[0] >= 0:
+                    # if move is valid
+                        if grid[neighbor_left[0]][neighbor_left[1]] <= DANGER:
+                            move_queue.append(neighbor_left)
+            # check RIGHT move
+            neighbor_right = [next_move[0] + 1, next_move[1]]
+            # if not already checked, or queued to be checked
+            if neighbor_right != current and neighbor_right not in checked_moves and neighbor_right not in move_queue:
+                # if move on board
+                if neighbor_right[0] < board_width:
+                    # if move is valid
+                        if grid[neighbor_right[0]][neighbor_right[1]] <= DANGER:
+                            move_queue.append(neighbor_right)
+    if contains_tail:
+        print('move contains tail!')
+    else:
+        print('move DOESNT contain tail')
+    return contains_tail
 
 
 # check if move in direction will kill you
 # return True if valid
 # return False if it will kill you
-def valid_move(d, map, data):
+def valid_move(d, grid, data):
     global board_height, board_width
     current = current_location(data)
     if status: print('CHECKING IF MOVE IS VALID!')
@@ -338,7 +596,7 @@ def valid_move(d, map, data):
         if current[1] - 1 < 0:
             if debug: print('Up move is OFF THE MAP!')
             return False
-        if map[current[0]][current[1] - 1] <= FOOD:
+        if grid[current[0]][current[1] - 1] <= DANGER:
             if debug: print('Up move is VALID.')
             return True
         else:
@@ -349,7 +607,7 @@ def valid_move(d, map, data):
         if current[0] - 1 < 0:
             if debug: print('Left move is OFF THE MAP!')
             return False
-        if map[current[0] - 1][current[1]] <= FOOD:
+        if grid[current[0] - 1][current[1]] <= DANGER:
             if debug: print('Left move is VALID.')
             return True
         else:
@@ -360,7 +618,7 @@ def valid_move(d, map, data):
         if current[1] + 1 > board_height - 1:
             if debug: print('Down move is OFF THE MAP!')
             return False
-        if map[current[0]][current[1] + 1] <= FOOD:
+        if grid[current[0]][current[1] + 1] <= DANGER:
             if debug: print('Down move is VALID.')
             return True
         else:
@@ -371,7 +629,7 @@ def valid_move(d, map, data):
         if current[0] + 1 > board_width - 1:
             if debug: print('Right move is OFF THE MAP!')
             return False
-        if map[current[0] + 1][current[1]] <= FOOD:
+        if grid[current[0] + 1][current[1]] <= DANGER:
             if debug: print('Right move is VALID.')
             return True
         else:
@@ -380,6 +638,16 @@ def valid_move(d, map, data):
     # failsafe
     if d > 3 and status: print('valid_move FAILED! direction IS NOT ONE OF FOUR POSSIBLE MOVES!')
     return True
+
+
+# return manhattan distance between a and b
+def get_distance(a, b):
+    return (abs(a[0] - b[0]) + abs(a[1] - b[1]))
+
+
+# convert object yx to list yx
+def get_coords (o):
+    return (o['x'], o['y'])
 
 
 # return x,y coords of current head location
@@ -417,9 +685,14 @@ def get_tail(data):
 
 
 # return grid of empty Cells for astar search data
-def build_astar_grid(w, h):
-    grid = [ [Cell(row, col) for col in range(h)] for row in range(w)]
-    return grid
+def build_astar_grid(data, grid):
+    w = data['width']
+    h = data['height']
+    astar_grid = [ [Cell(row, col) for col in range(h)] for row in range(w)]
+    for i in range(w):
+        for j in range(h):
+            astar_grid[i][j].state = grid[i][j]
+    return astar_grid
 
 
 # the cell class for storing a* search information
@@ -431,6 +704,7 @@ class Cell:
         self.h = 0
         self.x = x
         self.y = y
+        self.state = 0;
         self.neighbors = []
         self.previous = None
         if self.x < board_width - 1:
@@ -444,9 +718,35 @@ class Cell:
 
 
 # print whole map
-def print_map(map):
-    for row in map:
-        print(str(row))
+def print_map(grid):
+    #global board_height, board_width
+    w = len(grid)
+    h = len(grid[0])
+    for i in range(h):
+        line = ''
+        for j in range(w):
+            line += str(grid[j][i])
+        print(line)
+
+
+# will print f scores of the astar grid of cell data
+def print_f_scores(astar_grid):
+    w = len(astar_grid)
+    h = len(astar_grid[0])
+    for i in range(h):
+        line = ''
+        for j in range(w):
+            line += str(astar_grid[j][i].f)
+        print(line)
+
+
+# will return the minimum health required to keep alive
+def set_health_min(data):
+    health_board = max(board_height, board_width) * 2
+    health_length = data['you']['length']
+    if health_length > health_board:
+        return health_length
+    return health_board
 
 
 # Expose WSGI app (so gunicorn can find it)
