@@ -4,7 +4,7 @@ import time
 
 debug = True
 status = True
-theme = 'orange' # blue or orange
+theme = 'blue' # blue or orange
 # board variables
 SPACE = 0
 KILL_ZONE = 1
@@ -29,7 +29,7 @@ health = 100
 turn = 0
 survival_min = 50
 my_id = ''
-#mode = ['hungry', 'killing_time']
+INITIAL_FEEDING = 3
 
 
 @bottle.route('/static/<path:path>')
@@ -42,13 +42,7 @@ def static(path):
 def start():
     global game_id, board_width, board_height, survival_min
     data = bottle.request.json
-    # game_id = data['id']
-    # board_width = data['width']
-    # board_height = data['height']
-    # survival_min = max(board_height, board_width) * 2
-    #if survival_min > 100: survival_min = 100
-    if status:
-        print('STARTING NEW GAME.')
+    print('STARTING NEW GAME.')
     # get theme info
     # default theme blue
     primary_color = '#25c9f0'
@@ -89,7 +83,10 @@ def move():
     taunt = 'Super cool.'
     survival_min = set_health_min(data)
     # run ai to get next direction
-    if health < survival_min: #survival_min:
+    if health < survival_min:
+        taunt = 'Its cool.'
+        direction = hungry(data)
+    elif need_to_be_bigger(data):
         taunt = 'Not cool.'
         direction = hungry(data)
     else:
@@ -191,7 +188,7 @@ def astar(data, grid, destination):
     if debug:
         print("map:")
         print_map(grid)
-    print('MAP BUILT! CALCULATING PATH...')
+    if status: print('MAP BUILT! CALCULATING PATH...')
     #destination = get_coords(destination)
     search_scores = build_astar_grid(data, grid)
     open_set = []
@@ -199,7 +196,7 @@ def astar(data, grid, destination):
     # set start location to current head location
     start = current_location(data)
     # on first 3 moves, point to closest food
-    if data['turn'] < 10:
+    if data['turn'] < INITIAL_FEEDING:
         destination = closest_food(data)
     if debug:
         print('astar destination: ' + str(destination))
@@ -231,7 +228,6 @@ def astar(data, grid, destination):
             if debug: print('astar next move: ' + str(temp))
             next_move = calculate_direction(start, temp, grid, data)
             return next_move
-
         # else continue searching
         current = lowest_cell
         current_cell = search_scores[current[0]][current[1]]
@@ -241,11 +237,9 @@ def astar(data, grid, destination):
         # check every viable neighbor to current cell
         for neighbor in search_scores[current[0]][current[1]].neighbors:
             neighbor_cell = search_scores[neighbor[0]][neighbor[1]]
-
             if neighbor[0] == destination[0] and neighbor[1] == destination[1]:
                 if status: print('FOUND A PATH! (neighbor)')
                 neighbor_cell.previous = current
-
                 if debug:
                     print("astar grid after search success:")
                     print_f_scores(search_scores)
@@ -259,7 +253,6 @@ def astar(data, grid, destination):
                 if debug: print('astar next move: ' + str(temp))
                 next_move = calculate_direction(start, temp, grid, data)
                 return best_move(next_move, data, grid)
-
             # check if neighbor can be moved to
             if neighbor_cell.state < SNAKE_BODY:
                 # check if neighbor has already been evaluated
@@ -328,13 +321,11 @@ def best_move(reccommended_move, data, grid):
     snake_length = data['you']['length']
     if valid_move(reccommended_move, grid, data):
         area = look_ahead(reccommended_move, grid, data)
-        print('Length: ' + str(snake_length) + '. Area: ' + str(area))
+        if debug: print('Length: ' + str(snake_length) + '. Area: ' + str(area))
         
-
         # if move_contains_tail
         if snake_length <= area or move_contains_tail(reccommended_move, grid, data):
             return reccommended_move
-
 
     viable_moves = []
     danger_moves = []
@@ -387,22 +378,27 @@ def best_move(reccommended_move, data, grid):
     # if a non-DANGER move exists, calculate the best one
     if viable_moves:
         # if ALL moves are viable, take reccommended_move
-        print(len(viable_moves))
+        if debug: print(len(viable_moves))
         if len(viable_moves) >= 3 and recommended_move in viable_moves:
             print('ALL MOVES VALID, TAKING RECOMMENDED MOVE!')
             return reccommended_move
-        ## TESTING
-        if move_contains_tail(move, grid, data):
-            return move
         if status: print('VIABLE move exists!')
         best_move = reccommended_move
-        best_area = 0 #look_ahead(reccommended_move, grid, data)
+        best_area = 0
+        if  valid_move(reccommended_move, grid, data):
+            best_move = reccommended_move
+            best_area = look_ahead(reccommended_move, grid, data)
         for move in viable_moves:
+            ## TESTING
+            if move_contains_tail(move, grid, data):
+                return move
             # check available area of move
             new_area = look_ahead(move, grid, data)
+
             if new_area > best_area:
                 best_area = new_area
                 best_move = move
+
         return best_move
     # if only DANGER moves exist, calculate best one
     elif danger_moves:
@@ -428,16 +424,16 @@ def best_move(reccommended_move, data, grid):
 # calculates number of cells accessable given a move
 def look_ahead(move, grid, data):
     # directions = ['up', 'left', 'down', 'right']
-    test_grid = None
-    if debug:
-        w = len(grid)
-        h = len(grid[0])
-        test_grid = [ [0 for col in range(h)] for row in range(w)]
-        for i in range(w):
-            for j in range(h):
-                test_grid[i][j] = grid[i][j]
-        print('test grid before traversal:')
-        print_map(test_grid)
+    # test_grid = None
+    # if debug:
+    #     w = len(grid)
+    #     h = len(grid[0])
+    #     test_grid = [ [0 for col in range(h)] for row in range(w)]
+    #     for i in range(w):
+    #         for j in range(h):
+    #             test_grid[i][j] = grid[i][j]
+    #     print('test grid before traversal:')
+    #     print_map(test_grid)
     area = 0
     current = current_location(data)
     # get move coords
@@ -461,7 +457,7 @@ def look_ahead(move, grid, data):
         for next_move in move_queue:
             # next move is assessed
             area += 1
-            if debug: test_grid[next_move[0]][next_move[1]] = 7
+            #if debug: test_grid[next_move[0]][next_move[1]] = 7 #<##
             move_queue.remove(next_move)
             checked_moves.append(next_move)
             # check neighbors
@@ -499,11 +495,11 @@ def look_ahead(move, grid, data):
                 # if move on board
                 if neighbor_right[0] < board_width:
                     # if move is valid
-                        if grid[neighbor_right[0]][neighbor_right[1]] <= DANGER:
+                        if grid[neighbor_right[0]][neighbor_right[1]] <= DANGER: # <<<<<<<< failing
                             move_queue.append(neighbor_right)
-    if debug:
-        print('test grid after traversal:')
-        print_map(test_grid)
+    # if debug:
+    #     print('test grid after traversal:')
+    #     print_map(test_grid)
     return area
 
 
@@ -577,9 +573,9 @@ def move_contains_tail(move, grid, data):
                         if grid[neighbor_right[0]][neighbor_right[1]] <= DANGER:
                             move_queue.append(neighbor_right)
     if contains_tail:
-        print('move contains tail!')
+        if debug: print('move contains tail!')
     else:
-        print('move DOESNT contain tail')
+        if debug: print('move DOESNT contain tail')
     return contains_tail
 
 
@@ -738,6 +734,20 @@ def print_f_scores(astar_grid):
         for j in range(w):
             line += str(astar_grid[j][i].f)
         print(line)
+
+
+# returns if you are not the biggest snake
+def need_to_be_bigger(data):
+    my_id = data['you']['id']
+    my_length = data['you']['length']
+    longest_length = 0
+    for snake in data['snakes']['data']:
+        if my_id != snake['id']:
+            if snake['length'] > longest_length:
+                longest_length = snake['length']
+    if longest_length >= my_length:
+        return True
+    return False
 
 
 # will return the minimum health required to keep alive
