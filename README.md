@@ -8,6 +8,8 @@ This AI client uses the [bottle web framework](http://bottlepy.org/docs/dev/inde
 
 ## State of AI
 
+2018/02/17 - Will get an optimal direction from a* for the given target, and then look ahead at that move and the other possible moves to evaluate which is best. It also now tracks the length of other snakes and will eat to try to be largest. Now will properly prioritize head neighbor locations of snakes that are smaller than it when it is near so it can try to eat them. Working on agressive hunting behaviour when it is the largest snake.
+
 2018/02/13 - Switches between following own tail to kill time if health is above threshold and seeking nearest food if health is below threshold.
 
 2018/02/13 - Will seek closest food. Generally will avoid snake bodies and outer wall on each move.
