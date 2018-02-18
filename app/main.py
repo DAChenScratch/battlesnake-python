@@ -45,7 +45,7 @@ def start():
     print('STARTING NEW GAME.')
     # get theme info
     # default theme blue
-    primary_color = '#25c9f0'
+    primary_color = '#27cbf0'
     secondary_color = '#f0f0fd'
     head_url = '%s://%s/static/snake_profile_blue.png' % (
         bottle.request.urlparts.scheme,
@@ -82,13 +82,15 @@ def move():
     turn = data['turn']
     taunt = 'Super cool.'
     survival_min = set_health_min(data)
-    # run ai to get next direction
+    # if health is below set threshold
     if health < survival_min:
         taunt = 'Its cool.'
         direction = hungry(data)
-    elif need_to_be_bigger(data):
+    # if not the biggest snake
+    elif not biggest(data):
         taunt = 'Not cool.'
         direction = hungry(data)
+    # if all is well
     else:
         taunt = 'Super cool.'
         direction = kill_time(data)
@@ -105,13 +107,13 @@ def move():
     }
 
 
-# do your thing
+# seek closest food
 def hungry(data):
     if status: print('HUNGRY! SEEKING FOOD.')
     grid = build_map(data)
-    close_food = closest_food(data)
-    astar_move = astar(data, grid, close_food)
-    return astar_move
+    close_food = closest_food(grid, data)
+    move = astar(data, grid, close_food, 'food')
+    return move
 
 
 # follow own tail to kill time
@@ -119,8 +121,17 @@ def kill_time(data):
     if status: print('COOL. KILLING TIME.')
     grid = build_map(data)
     tail = get_tail(data)
-    astar_move = astar(data, grid, tail)
-    return astar_move
+    move = astar(data, grid, tail, 'my_tail')
+    return move
+
+
+# target edible enemy head
+# def hunt(data):
+#     if status: print('ON THE HUNT! SEEKING ENEMY HEAD.')
+#     grid = build_map(data)
+#     enemy_head = get_enemy_head(data)
+#     move = astar(data, grid, enemy_head, 'enemy_head')
+#     return move
 
 
 # return map array
@@ -183,7 +194,7 @@ def build_map(data):
 
 
 # astar search, returns move that moves closest to destination
-def astar(data, grid, destination):
+def astar(data, grid, destination, mode):
     global debug
     if debug:
         print("map:")
@@ -197,7 +208,7 @@ def astar(data, grid, destination):
     start = current_location(data)
     # on first 3 moves, point to closest food
     if data['turn'] < INITIAL_FEEDING:
-        destination = closest_food(data)
+        destination = closest_food(grid, data)
     if debug:
         print('astar destination: ' + str(destination))
         # print("astar grid before search:")
@@ -281,8 +292,13 @@ def astar(data, grid, destination):
         if debug:
             print("astar grid after search failure:")
             print_f_scores(search_scores)
+
+        move = 2
+        if mode == 'food':
+            tail = get_tail(data)
+            move = astar(data, grid, tail, 'my_tail')
         
-        return best_move(2, data, grid)
+        return best_move(move, data, grid)
 
 
 # return direction from a to b
@@ -318,88 +334,129 @@ def best_move(reccommended_move, data, grid):
     if status: print('CHECKING FOR BEST MOVE...')
     # directions = ['up', 'left', 'down', 'right']
     # check reccommended move first
-    snake_length = data['you']['length']
-    if valid_move(reccommended_move, grid, data):
-        area = look_ahead(reccommended_move, grid, data)
-        if debug: print('Length: ' + str(snake_length) + '. Area: ' + str(area))
+    # snake_length = data['you']['length']
+    # if valid_move(reccommended_move, grid, data):
+    #     area = look_ahead(reccommended_move, grid, data)
+    #     if debug: print('Length: ' + str(snake_length) + '. Area: ' + str(area))
         
-        # if move_contains_tail
-        if snake_length <= area or move_contains_tail(reccommended_move, grid, data):
-            return reccommended_move
+    #     # if move_contains_tail
+    #     if snake_length <= area or move_contains_tail(reccommended_move, grid, data):
+    #         return reccommended_move
 
-    viable_moves = []
+    reg_moves = []
     danger_moves = []
+    kill_moves = []
     current = current_location(data)
     best_move = []
     # check UP move
     if current[1] - 1 >= 0 and grid[current[0]][current[1] - 1] <= DANGER:
         if debug: print('move UP is viable')
-        viable_moves.append(UP)
+        reg_moves.append(UP)
     # check DOWN move
     if current[1] + 1 < board_height and grid[current[0]][current[1] + 1] <= DANGER:
         if debug: print('move DOWN is viable')
-        viable_moves.append(DOWN)
+        reg_moves.append(DOWN)
     # check LEFT move
     if current[0] - 1 >= 0 and grid[current[0] - 1][current[1]] <= DANGER:
         if debug: print('move LEFT is viable')
-        viable_moves.append(LEFT)
+        reg_moves.append(LEFT)
     # check RIGHT move
     if current[0] + 1 < board_width and grid[current[0] + 1][current[1]] <= DANGER:
         if debug: print('move RIGHT is viable')
-        viable_moves.append(RIGHT)
+        reg_moves.append(RIGHT)
     # check viable moves for a move better than DANGER
-    if viable_moves:
-        for move in viable_moves:
+    if reg_moves:
+        for move in reg_moves:
             # UP
             if move == UP:
                 if grid[current[0]][current[1] - 1] == DANGER:
-                    viable_moves.remove(move)
+                    reg_moves.remove(move)
                     danger_moves.append(move)
+                elif grid[current[0]][current[1] - 1] == KILL_ZONE:
+                    reg_moves.remove(move)
+                    kill_moves.append(move)
             # DOWN
             elif move == DOWN:
                 if grid[current[0]][current[1] + 1] == DANGER:
-                    viable_moves.remove(move)
+                    reg_moves.remove(move)
                     danger_moves.append(move)
+                elif grid[current[0]][current[1] + 1] == KILL_ZONE:
+                    reg_moves.remove(move)
+                    kill_moves.append(move)
             # LEFT
             elif move == LEFT:
                 if grid[current[0] - 1][current[1]] == DANGER:
-                    viable_moves.remove(move)
+                    reg_moves.remove(move)
                     danger_moves.append(move)
+                elif grid[current[0] - 1][current[1]] == KILL_ZONE:
+                    reg_moves.remove(move)
+                    kill_moves.append(move)
             # RIGHT
             elif move == RIGHT:
                 if grid[current[0] + 1][current[1]] == DANGER:
-                    viable_moves.remove(move)
+                    reg_moves.remove(move)
                     danger_moves.append(move)
+                elif grid[current[0] + 1][current[1]] == KILL_ZONE:
+                    reg_moves.remove(move)
+                    kill_moves.append(move)
     else: # NO MOVE AT ALL
         if status:
             print('DEAD END, NO VALID MOVE REMAINING! (none at all)')
             print('GAME OVER')
         return reccommended_move # suicide
-    # if a non-DANGER move exists, calculate the best one
-    if viable_moves:
-        # if ALL moves are viable, take reccommended_move
-        if debug: print(len(viable_moves))
-        if len(viable_moves) >= 3 and recommended_move in viable_moves:
-            print('ALL MOVES VALID, TAKING RECOMMENDED MOVE!')
+
+    # if a kill move exists, pick the best one
+    if kill_moves:
+        # if all moves are kill moves, take reccommended move
+        if len(kill_moves) >= 3 and reccommended_move in kill_moves:
+            if debug: print('ALL MOVES ARE KILL MOVES, TAKING RECCOMMENDED MOVE!')
             return reccommended_move
-        if status: print('VIABLE move exists!')
+        # otherwise calculate best kill move
+        if status: print('KILL move exists!')
         best_move = reccommended_move
         best_area = 0
-        if  valid_move(reccommended_move, grid, data):
+        # check reccommended_move first
+        if valid_move(reccommended_move, grid, data):
             best_move = reccommended_move
             best_area = look_ahead(reccommended_move, grid, data)
-        for move in viable_moves:
-            ## TESTING
+        # check every other kill move
+        for move in kill_moves:
+            # if the move contains your tail, its probably a pretty good move
             if move_contains_tail(move, grid, data):
                 return move
             # check available area of move
             new_area = look_ahead(move, grid, data)
-
             if new_area > best_area:
                 best_area = new_area
                 best_move = move
-
         return best_move
+
+    # if a non-DANGER move exists, calculate the best one
+    elif reg_moves:
+        # if ALL moves are reg, take reccommended move
+        if status: print(str(len(reg_moves)) + ' VIABLE move(s) exist!')
+        if len(reg_moves) >= 3 and reccommended_move in reg_moves:
+            if debug: print('ALL MOVES VALID, TAKING RECCOMMENDED MOVE!')
+            return reccommended_move
+        # otherwise calulate the best reg move
+        best_move = reccommended_move
+        best_area = 0
+        # check reccommended move first
+        if valid_move(reccommended_move, grid, data):
+            best_move = reccommended_move
+            best_area = look_ahead(reccommended_move, grid, data)
+        # check every other reg move
+        for move in reg_moves:
+            # if the move contains your tail, its probably a pretty good move
+            #if move_contains_tail(move, grid, data):
+                #return move
+            # check available area of move
+            new_area = look_ahead(move, grid, data)
+            if new_area > best_area:
+                best_area = new_area
+                best_move = move
+        return best_move
+
     # if only DANGER moves exist, calculate best one
     elif danger_moves:
         # if ALL moves are DANGER, take reccommended_move
@@ -407,6 +464,10 @@ def best_move(reccommended_move, data, grid):
         if status: print('No VIABLE move, only DANGER moves exist!')
         best_move = reccommended_move
         best_area = 0
+        # check reccommended move first
+        if valid_move(reccommended_move, grid, data):
+            best_move = reccommended_move
+            best_area = look_ahead(reccommended_move, grid, data)
         for move in danger_moves:
             # check available area of move
             new_area = look_ahead(move, grid, data)
@@ -652,23 +713,39 @@ def current_location(data):
 
 
 # return coords of closest food to head
-def closest_food(data):
-    current = current_location(data)
-    shortest_distance = -1
-    closest_food = None
-    foods = data['food']['data']
-    # iterate over each piece of food
-    for food in foods:
-        food = get_coords(food)
-        distance = get_distance(current, food)
-        if shortest_distance < 0:
-            shortest_distance = distance
-            closest_food = food
-        else:
-            if distance < shortest_distance:
-                shortest_distance = distance
-                closest_food = food
-    return closest_food
+# def closest_food(data):
+#     current = current_location(data)
+#     shortest_distance = -1
+#     closest_food = None
+#     foods = data['food']['data']
+#     # iterate over each piece of food
+#     for food in foods:
+#         food = get_coords(food)
+#         distance = get_distance(current, food)
+#         if shortest_distance < 0:
+#             shortest_distance = distance
+#             closest_food = food
+#         else:
+#             if distance < shortest_distance:
+#                 shortest_distance = distance
+#                 closest_food = food
+#     return closest_food
+
+# return coords of closest food to head, using grid
+def closest_food(grid, data):
+    my_location = current_location(data)
+    close_food = None
+    close_distance = 9999
+    for i in range(len(grid)):
+        for j in range(len(grid[0])):
+            if grid[i][j] == FOOD:
+                food = [i, j]
+                distance = get_distance(my_location, food)
+                if distance < close_distance:
+                    close_food = food
+                    close_distance = distance
+    return close_food
+
 
 
 # return coords to own tail
@@ -737,7 +814,7 @@ def print_f_scores(astar_grid):
 
 
 # returns if you are not the biggest snake
-def need_to_be_bigger(data):
+def biggest(data):
     my_id = data['you']['id']
     my_length = data['you']['length']
     longest_length = 0
@@ -746,8 +823,8 @@ def need_to_be_bigger(data):
             if snake['length'] > longest_length:
                 longest_length = snake['length']
     if longest_length >= my_length:
-        return True
-    return False
+        return False
+    return True
 
 
 # will return the minimum health required to keep alive
